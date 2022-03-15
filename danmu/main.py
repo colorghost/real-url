@@ -7,7 +7,7 @@ import json
 
 import danmaku
 import websockets
-
+import time
 
 async def printer(q):
     while True:
@@ -20,7 +20,7 @@ async def wsPrinter(websocket, q):
     while True:
         m = await q.get()
         if m['msg_type'] == 'danmaku':
-            print(f'用户{m["name"]}弹幕：{m["content"]}')
+            print(f'用户{m["name"]}弹幕：{m["content"]} {time.strftime("%Y-%m-%d %H:%M:%S",time.localtime())}')
             dumped = json.dumps(m, separators=(',', ':'), ensure_ascii=False)
             await websocket.send(dumped)
 
