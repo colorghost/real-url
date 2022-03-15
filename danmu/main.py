@@ -3,7 +3,10 @@
 # 仅抓取用户弹幕，不包括入场提醒、礼物赠送等。
 
 import asyncio
+import json
+
 import danmaku
+import websockets
 
 
 async def printer(q):
@@ -13,6 +16,15 @@ async def printer(q):
             print(f'{m["name"]}：{m["content"]}')
 
 
+async def wsPrinter(websocket, q):
+    while True:
+        m = await q.get()
+        if m['msg_type'] == 'danmaku':
+            print(f'用户{m["name"]}弹幕：{m["content"]}')
+            dumped = json.dumps(m, separators=(',', ':'), ensure_ascii=False)
+            await websocket.send(dumped)
+
+
 async def main(url):
     q = asyncio.Queue()
     dmc = danmaku.DanmakuClient(url, q)
@@ -20,8 +32,25 @@ async def main(url):
     await dmc.start()
 
 
-a = input('请输入直播间地址：\n')
-asyncio.run(main(a))
+async def ws_handler(websocket, path):
+    while True:
+        """
+        直播间地址
+        """
+        room_path = path[1:]
+        q = asyncio.Queue()
+        dmc = danmaku.DanmakuClient(room_path, q)
+        asyncio.create_task(wsPrinter(websocket, q))
+        await dmc.start()
+
+
+start_server = websockets.serve(ws_handler, 'localhost', 7852)
+print("listen on localhost:7852")
+asyncio.get_event_loop().run_until_complete(start_server)
+asyncio.get_event_loop().run_forever()
+
+# a = input('请输入直播间地址：\n')
+# asyncio.run(main(a))
 
 # 虎牙直播：https://www.huya.com/11352915
 # 斗鱼直播：https://www.douyu.com/85894
